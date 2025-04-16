@@ -1,0 +1,7 @@
+AI Prompts (prompts.txt)
+
+1. Generate a Go handler function for connecting to ClickHouse using JWT authentication.
+2. Create a Go function to fetch table schemas from ClickHouse.
+3. Implement a Go handler for ingesting data from ClickHouse to a CSV file.
+4. Generate a React component for a data ingestion UI with source selection, connection config, and column selection.
+5. Create a Go test case for validating ClickHouse connection.
