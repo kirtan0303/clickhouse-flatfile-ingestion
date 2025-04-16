@@ -13,7 +13,7 @@ docker run -d -p 9000:9000 clickhouse/clickhouse-server
 
 4. Load example datasets (e.g., `uk_price_paid`):
 
-curl https://clickhouse.com/docs/en/getting-started/example-datasets/uk_price_paid.sql | clickhouse-client
+curl https://clickhouse.com/docs/getting-started/example-datasets | clickhouse-client
 
 5. Run Go backend:
 
