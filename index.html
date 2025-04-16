@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Data Ingestion Tool</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@17/umd/react.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/babel-standalone@6/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        function App() {
+            const [source, setSource] = React.useState("ClickHouse");
+            const [config, setConfig] = React.useState({
+                host: "localhost",
+                port: "9000",
+                database: "",
+                user: "",
+                jwt: "",
+                fileName: "",
+                delimiter: ","
+            });
+            const [schemas, setSchemas] = React.useState([]);
+            const [selectedTable, setSelectedTable] = React.useState("");
+            const [selectedColumns, setSelectedColumns] = React.useState([]);
+            const [status, setStatus] = React.useState("");
+            const [result, setResult] = React.useState(null);
+
+            const handleConnect = async () => {
+                setStatus("Connecting...");
+                try {
+                    const res = await fetch("/connect", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ source, ...config })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        setStatus("Connected");
+                        handleLoadSchemas();
+                    } else {
+                        setStatus(`Error: ${data.error}`);
+                    }
+                } catch (err) {
+                    setStatus(`Error: ${err.message}`);
+                }
+            };
+
+            const handleLoadSchemas = async () => {
+                setStatus("Fetching schemas...");
+                try {
+                    const res = await fetch("/schemas", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ source, ...config })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        setSchemas(data);
+                        setStatus("Schemas loaded");
+                    } else {
+                        setStatus(`Error: ${data.error}`);
+                    }
+                } catch (err) {
+                    setStatus(`Error: ${err.message}`);
+                }
+            };
+
+            const handleIngest = async () => {
+                setStatus("Ingesting...");
+                try {
+                    const target = source === "ClickHouse" ? "Flat File" : "ClickHouse";
+                    const req = {
+                        source,
+                        target,
+                        table: selectedTable,
+                        columns: selectedColumns,
+                        fileName: config.fileName,
+                        delimiter: config.delimiter
+                    };
+                    const res = await fetch("/ingest", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(req)
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        setResult(data);
+                        setStatus(`Completed: ${data.count} records ingested`);
+                    } else {
+                        setStatus(`Error: ${data.error}`);
+                    }
+                } catch (err) {
+                    setStatus(`Error: ${err.message}`);
+                }
+            };
+
+=20
+            const handleInputChange = (e) => {
+                setConfig({ ...config, [e.target.name]: e.target.value });
+            };
+
+            const handleColumnToggle = (col) => {
+                setSelectedColumns(
+                    selectedColumns.includes(col)
+                        ? selectedColumns.filter(c => c !== col)
+                        : [...selectedColumns, col]
+                );
+            };
+
+            return (
+                <div className="container mx-auto p-4">
+                    <h1 className="text-2xl font-bold mb-4">Data Ingestion Tool</h1>
+                    <div className="mb-4">
+                        <label className="block mb-2">Source</label>
+                        <select
+                            className="border p-2 w-full"
+                            value={source}
+                            onChange={(e) => setSource(e.target.value)}
+                        >
+                            <option>ClickHouse</option>
+                            <option>Flat File</option>
+                        </select>
+                    </div>
+                    {source === "ClickHouse" ? (
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label className="block mb-2">Host</label>
+                                <input
+                                    type="text"
+                                    name="host"
+                                    value={config.host}
+                                    onChange={handleInputChange}
+                                    className="border p-2 w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-2">Port</label>
+                                <input
+                                    type="text"
+                                    name="port"
+                                    value={config.port}
+                                    onChange={handleInputChange}
+                                    className="border p-2 w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-2">Database</label>
+                                <input
+                                    type="text"
+                                    name="database"
+                                    value={config.database}
+                                    onChange={handleInputChange}
+                                    className="border p-2 w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-2">User</label>
+                                <input
+                                    type="text"
+                                    name="user"
+                                    value={config.user}
+                                    onChange={handleInputChange}
+                                    className="border p-2 w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-2">JWT Token</label>
+                                <input
+                                    type="password"
+                                    name="jwt"
+                                    value={config.jwt}
+                                    onChange={handleInputChange}
+                                    className="border p-2 w-full"
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label className="block mb-2">File Name</label>
+                                <input
+                                    type="text"
+                                    name="fileName"
+                                    value={config.fileName}
+                                    onChange={handleInputChange}
+                                    className="border p-2 w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-2">Delimiter</label>
+                                <input
+                                    type="text"
+                                    name="delimiter"
+                                    value={config.delimiter}
+                                    onChange={handleInputChange}
+                                    className="border p-2 w-full"
+                                />
+                            </div>
+                        </div>
+                    )}
+                    <div className="flex gap-4 mb-4">
+                        <button
+                            className="bg-blue-500 text-white p-2 rounded"
+                            onClick={handleConnect}
+                        >
+                            Connect
+                        </button>
+                        <button
+                            className="bg-blue-500 text-white p-2 rounded"
+                            onClick={handleLoadSchemas}
+                            disabled={status !== "Connected"}
+                        >
+                            Load Schemas
+                        </button>
+                    </div>
+                    {schemas.length > 0 && (
+                        <div className="mb-4">
+                            <label className="block mb-2">Table</label>
+                            <select
+                                className="border p-2 w-full"
+                                value={selectedTable}
+                                onChange={(e) => setSelectedTable(e.target.value)}
+                            >
+                                <option value="">Select Table</option>
+                                {schemas.map(s => (
+                                    <option key={s.table} value={s.table}>{s.table}</option>
+                                ))}
+                            </select>
+                            {selectedTable && (
+                                <div className="mt-4">
+                                    <h3 className="text-lg font-semibold">Columns</h3>
+                                    {schemas.find(s => s.table === selectedTable).columns.map(col => (
+                                        <div key={col} className="flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedColumns.includes(col)}
+                                                onChange={() => handleColumnToggle(col)}
+                                                className="mr-2"
+                                            />
+                                            <span>{col}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    <button
+                        className="bg-green-500 text-white p-2 rounded"
+                        onClick={handleIngest}
+                        disabled={!selectedTable || selectedColumns.length === 0}
+                    >
+                        Start Ingestion
+                    </button>
+                    <div className="mt-4">
+                        <h3 className="text-lg font-semibold">Status</h3>
+                        <p>{status}</p>
+                    </div>
+                    {result && (
+                        <div className="mt-4">
+                            <h3 className="text-lg font-semibold">Result</h3>
+                            <p>{result.count} records ingested</p>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById("root"));
+    </script>
+</body>
+</html>
